@@ -27,7 +27,7 @@ The server will start listening on localhost port 9000.
 
 Stop the server with interrupt signal, typically CTRL-C.
 
-= Test
+== Test
 
 While the server is running, hit it with re requests.  E.g.:
 
@@ -35,3 +35,15 @@ While the server is running, hit it with re requests.  E.g.:
  curl -v -X OPTIONS http://localhost:9000/
  curl -v http://localhost:9000/
 
+== Docker
+
+If you've got Docker, you can build this app into a docker image:
+
+ ./gradlew dockerImage
+
+And then run the container:
+
+ docker run --rm -it -p9000:9000 vmj0/http-server:java8
+
+Now the same test commands should work.
+(Use `docker ps` and `docker stop CONTAINER_ID` to cleanup).

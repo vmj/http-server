@@ -87,7 +87,7 @@ public class Main {
     private static final Logger log = Logger.getGlobal();
     private static final byte[] ROOT_RESOURCE = "Hello World\n".getBytes(forName("UTF-8"));
     private static final byte[] EMPTY_RESPONSE_BODY = new byte[0];
-    private static final InetSocketAddress ADDRESS = new InetSocketAddress("localhost", 9000);
+    private static final InetSocketAddress ADDRESS = new InetSocketAddress("0.0.0.0", 9000);
     private static final int BACKLOG = 10;
     private static final String ROOT_CONTEXT_PATH = "/";
     private static final String GET = "GET";
