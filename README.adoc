@@ -1,0 +1,35 @@
+= A simple JDK HTTP server
+
+Build requirements:
+
+ * JDK 8 (not tested with 9)
+
+Runtime requirements:
+
+ * JRE 8 (not tested with 9)
+
+== Build
+
+You do not need Gradle installed.  Instead, use the provided wrapper:
+
+ ./gradlew assemble
+
+On first invocation, it will download Gradle.
+Then it will build the executable JAR of the application.
+
+== Run
+
+ java -jar build/libs/http-server-1.0-SNAPSHOT.jar
+
+The server will start listening on localhost port 9000.
+
+Stop the server with interrupt signal, typically CTRL-C.
+
+= Test
+
+While the server is running, hit it with re requests.  E.g.:
+
+ curl --head http://localhost:9000/
+ curl -v -X OPTIONS http://localhost:9000/
+ curl -v http://localhost:9000/
+
