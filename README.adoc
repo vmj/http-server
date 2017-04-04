@@ -1,3 +1,71 @@
+
+
+== Starting point
+
+  java --list-modules |wc -l
+  # 94
+
+== Compile
+
+  rm -rf build/classes/main
+  mkdir -p build/classes/main
+  javac -d build/classes/main src/main/java/module-info.java src/main/java/fi/linuxbox/http/Main.java
+
+== SIDE TRACK: Run class files as module
+
+  java --module-path build/classes/main -m http.server/fi.linuxbox.http.Main
+
+  #java -Xdiag:resolver ...
+
+== Packaging the module
+
+  rm -rf build/libs
+  mkdir -p build/libs
+  jar --create --file build/libs/http-server-1.0-SNAPSHOT.jar --main-class fi.linuxbox.http.Main -C build/classes/main .
+
+== Linking into a small runtime
+
+  export J=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
+  jlink --module-path build/libs:$J \
+        --add-modules http.server \
+        --output jre
+  du -csh jre
+  # 35M
+  jre/bin/java --list-modules
+  4
+
+== Optimizing the runtime
+
+  jlink --module-path build/libs:$J --strip-debug --vm server --compress 2 --class-for-name --no-header-files --no-man-pages \
+        --add-modules http.server \
+        --output jre2
+  # 21M
+
+== Run module
+
+  jre2/bin/java -m http.server
+
+== Dockerizing the custom runtime
+
+NOTE: the custom runtime needs to be built for Linux, because that's where we will run it.
+
+  Download Linux JDK 9 (JRE doesn't seem to contain modules???)
+
+  export LINUX_JDK_MODS=.../jdk-9/jmods
+
+  jlink --module-path build/libs:$LINUX_JDK_MODS --strip-debug --vm server --compress 2 --class-for-name --no-header-files --no-man-pages \
+        --add-modules http.server \
+        --output elf-jre
+
+  rm -rf build/docker
+  mkdir -p build/docker
+  cp -a Dockerfile jre2 build/docker
+  (cd build/docker && docker build --tag vmj0/http-server:java9 .)
+
+== Running the docker image
+
+  docker run --rm -it -p9000:9000 vmj0/http-server:java9
+
 image:https://travis-ci.org/vmj/http-server.svg?branch=master["Build Status", link="https://travis-ci.org/vmj/http-server"]
 
 = A simple JDK HTTP server
