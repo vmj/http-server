@@ -8,6 +8,7 @@ JRE_DIR=$(BUILD_DIR)/jre
 SRC_DIR=src
 JAVA_SRC_DIR=$(SRC_DIR)/main/java
 
+ALPINE_JMODS=/Users/vmj/linux/alpine/jdk-9/jmods
 LINUX_JMODS=/usr/lib/jvm/java-9-openjdk-amd64/jmods
 MACOS_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
 
@@ -27,15 +28,15 @@ $(CLASSES_DIR)/fi/linuxbox/http/Main.class: $(JAVA_SRC_DIR)/fi/linuxbox/http/Mai
 	javac -d $(CLASSES_DIR) $(JAVA_SRC_DIR)/module-info.java $(JAVA_SRC_DIR)/fi/linuxbox/http/Main.java
 
 .PHONY=dockerImage
-dockerImage: Dockerfile $(JRE_DIR)/linux
+dockerImage: Dockerfile $(JRE_DIR)/alpine
 	rm -rf $(DOCKER_DIR)
 	mkdir -p $(DOCKER_DIR)
-	cp -a Dockerfile $(JRE_DIR)/linux $(DOCKER_DIR)
+	cp -a Dockerfile $(JRE_DIR)/alpine $(DOCKER_DIR)
 	(cd $(DOCKER_DIR) && docker build --tag vmj0/http-server:java9 .)
 
 
 dockerRun: dockerImage
-	docker run --rm -it -p9000:9000 vmj0/http-server:java9 sh
+	docker run --rm -it -p9000:9000 vmj0/http-server:java9
 
 $(JRE_DIR)/linux: $(JMODS_DIR)/http-server-1.0-SNAPSHOT.jar
 	rm -rf $(JRE_DIR)/linux
@@ -44,3 +45,7 @@ $(JRE_DIR)/linux: $(JMODS_DIR)/http-server-1.0-SNAPSHOT.jar
 $(JRE_DIR)/macos: $(JMODS_DIR)/http-server-1.0-SNAPSHOT.jar
 	rm -rf $(JRE_DIR)/macos
 	jlink --module-path $(JMODS_DIR):$(MACOS_JMODS) --strip-debug --vm server --compress 2 --class-for-name --no-header-files --no-man-pages --add-modules http.server --output $(JRE_DIR)/macos
+
+$(JRE_DIR)/alpine: $(JMODS_DIR)/http-server-1.0-SNAPSHOT.jar
+	rm -rf $(JRE_DIR)/alpine
+	jlink --module-path $(JMODS_DIR):$(ALPINE_JMODS) --strip-debug --vm server --compress 2 --class-for-name --no-header-files --no-man-pages --add-modules http.server --output $(JRE_DIR)/alpine
