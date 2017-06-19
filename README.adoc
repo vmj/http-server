@@ -43,7 +43,7 @@ If you've got Docker, you can build this app into a docker image:
 
 And then run the container:
 
- docker run --rm -it -p9000:9000 vmj0/http-server:java8
+ docker run --rm -it -p9000:9000 vmj0/http-server-alpine-java8:1.0-SNAPSHOT
 
 Now the same test commands should work.
 (Use `docker ps` and `docker stop CONTAINER_ID` to cleanup).
