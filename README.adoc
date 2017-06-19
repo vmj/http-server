@@ -1,6 +1,6 @@
 == ASD
 
-image:https://travis-ci.org/vmj/http-server.svg?branch=master["Build Status", link="https://travis-ci.org/vmj/http-server"]
+image:https://travis-ci.org/vmj/http-server.svg?branch=java9["Build Status", link="https://travis-ci.org/vmj/http-server/branches"]
 
 This project showcases what is in my opinion the coolest features in JDK 9:
 
