@@ -1,4 +1,4 @@
-== ASD
+== Smaller Java 9 apps in Docker
 
 image:https://travis-ci.org/vmj/http-server.svg?branch=java9["Build Status", link="https://travis-ci.org/vmj/http-server/branches"]
 
@@ -8,6 +8,7 @@ This project showcases what is in my opinion the coolest features in JDK 9:
  * native support for Alpine Linux
 
 Those both boil down to more efficient container usage.
+Spacewise.
 
 Creating a custom runtime for your app means
 that you can drop all the useless modules from your packaging.
@@ -18,7 +19,7 @@ that Java ships with (AWT, Swing, and JavaFX).
 Being able to put that custom runtime natively on Alpine Linux gives you
 really slim end result.
 People are routinely using Alpine Linux for small containers,
-and Alpine has maintained a patched JRE for Java people.
+and community has maintained a patched JRE for Java people.
 That was fine for a long time,
 but now we no longer have to use an unofficial JRE.
 
