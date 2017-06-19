@@ -1,6 +1,6 @@
 == Smaller Java 9 apps in Docker
 
-image:https://travis-ci.org/vmj/http-server.svg?branch=java9["Build Status", link="https://travis-ci.org/vmj/http-server/branches"]
+image:https://travis-ci.org/vmj/http-server.svg?branch=master["Build Status", link="https://travis-ci.org/vmj/http-server/branches"]
 
 This project showcases what is in my opinion the coolest features in JDK 9:
 
