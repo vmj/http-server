@@ -7,7 +7,7 @@ This project showcases what is in my opinion the coolest features in JDK 9:
  * ability to create custom runtime for your application
  * native support for Alpine Linux
 
-Those both boil down more efficient container usage.
+Those both boil down to more efficient container usage.
 
 Creating a custom runtime for your app means
 that you can drop all the useless modules from your packaging.
@@ -295,7 +295,7 @@ Now you can upload the build context to the docker daemon and build the image:
   $ (cd build/docker && docker build --tag vmj0/http-server-alpine:1.0-SNAPSHOT .)
 
 And, you can do the same dance for Linux,
-just replacing alpine with linux three places:
+just replacing alpine with linux in three places:
 
   $ rm -rf build/docker
   $ mkdir -p build/docker
@@ -330,8 +330,11 @@ It's optional, since I've shown you above how to do things,
 but the `Makefile` contains all the above commands.
 
 If you've got GNU make, try invoking `make help`.
-Or:
+Or do the following (adjusting paths, naturally) and read the help later:
 
+  $ export NATIVE_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
+  $ export ALPINE_JMODS=/Users/vmj/jdks/x64-musl/jdk-9/jmods
+  $ export LINUX_JMODS=/Users/vmj/jdks/x64-linux/jdk-9/jmods
   $ for target in native alpine linux ; do make jre TARGET=$target ; done
   $ for target in alpine linux ; do make dockerImage TARGET=$target ; done
 
