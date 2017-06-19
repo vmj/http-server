@@ -38,6 +38,13 @@ Let's see how many modules this JDK alone has:
   $ java --list-modules |wc -l
         94
 
+In order to follow these steps, you will also need Docker and git installed.
+
+=== Clone this repository
+
+  $ git clone https://github.com/vmj/http-server.git
+  $ cd http-server
+
 === Compile the Java source code to class files
 
 This project has just two Java files: the module info and the main class.
