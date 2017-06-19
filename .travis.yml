@@ -1,6 +1,15 @@
 language: java
+# sudo, dist, and group are required for oraclejdk9.
+# Remove them as soon as container infra has java9 support.
+sudo: required
+dist: trusty
+group: edge
 jdk:
-  - oraclejdk8
+  - oraclejdk9
+# Travis location for jmods
+env:
+  - NATIVE_JMODS=/usr/lib/jvm/java-9-oracle/jmods
+script: make jre
 # A peculiarity of dependency caching in Gradle means that to avoid uploading the cache after every build the following
 # lines must be added:
 before_cache:

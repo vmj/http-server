@@ -1,49 +1,349 @@
-image:https://travis-ci.org/vmj/http-server.svg?branch=master["Build Status", link="https://travis-ci.org/vmj/http-server"]
+== Smaller Java 9 apps in Docker
 
-= A simple JDK HTTP server
+image:https://travis-ci.org/vmj/http-server.svg?branch=java9["Build Status", link="https://travis-ci.org/vmj/http-server/branches"]
 
-Build requirements:
+This project showcases what is in my opinion the coolest features in JDK 9:
 
- * JDK 8 (not tested with 9)
+ * ability to create custom runtime for your application
+ * native support for Alpine Linux
 
-Runtime requirements:
+Those both boil down to more efficient container usage.
+Spacewise.
 
- * JRE 8 (not tested with 9)
+Creating a custom runtime for your app means
+that you can drop all the useless modules from your packaging.
+Like in this example,
+why should a server application ship with all the user interface toolkits
+that Java ships with (AWT, Swing, and JavaFX).
 
-== Build
+Being able to put that custom runtime natively on Alpine Linux gives you
+really slim end result.
+People are routinely using Alpine Linux for small containers,
+and community has maintained a patched JRE for Java people.
+That was fine for a long time,
+but now we no longer have to use an unofficial JRE.
 
-You do not need Gradle installed.  Instead, use the provided wrapper:
+=== Starting point
 
- ./gradlew assemble
+You will need a recent Early Access JDK 9.
 
-On first invocation, it will download Gradle.
-Then it will build the executable JAR of the application.
+  $ java -version
+  java version "9-ea"
+  Java(TM) SE Runtime Environment (build 9-ea+174)
+  Java HotSpot(TM) 64-Bit Server VM (build 9-ea+174, mixed mode)
 
-== Run
+As you probably know, JDK was modularized.
+Let's see how many modules this JDK alone has:
 
- java -jar build/libs/http-server-1.0-SNAPSHOT.jar
+  $ java --list-modules |wc -l
+        94
 
-The server will start listening on localhost port 9000.
+=== Compile the Java source code to class files
 
-Stop the server with interrupt signal, typically CTRL-C.
+This project has just two Java files: the module info and the main class.
+The compilation is nothing new:
 
-== Test
+  $ rm -rf build/classes/main
+  $ mkdir -p build/classes/main
+  $ javac -d build/classes/main \
+      src/main/java/module-info.java \
+      src/main/java/fi/linuxbox/http/Main.java
 
-While the server is running, hit it with re requests.  E.g.:
+=== Run the class files as a module
 
- curl --head http://localhost:9000/
- curl -v -X OPTIONS http://localhost:9000/
- curl -v http://localhost:9000/
+Since we have the module-info in there,
+we can put the class files on the module path as opposed to classpath,
+and run the module:
 
-== Docker
+  $ java --module-path build/classes/main \
+      -m http.server/fi.linuxbox.http.Main
 
-If you've got Docker, you can build this app into a docker image:
+After testing (see below),
+use `CTRL-C` or similar to interrupt the application.
 
- ./gradlew dockerImage
+=== Test
 
-And then run the container:
+While the server is running, hit it with requests. E.g.:
 
- docker run --rm -it -p9000:9000 vmj0/http-server-alpine-java8:1.0-SNAPSHOT
+  $ curl http://localhost:9000/
+  Hello World
 
-Now the same test commands should work.
-(Use `docker ps` and `docker stop CONTAINER_ID` to cleanup).
+This little server also supports the `HEAD` method:
+
+  $ curl --head http://localhost:9000/
+  HTTP/1.1 200 OK
+  Date: Sun, 18 Jun 2017 15:37:11 GMT
+  Content-type: text/plain; charset=utf-8
+
+And `OPTIONS` (note the `Allow` header in the response):
+
+  $ curl -v -X OPTIONS http://localhost:9000/
+  *   Trying ::1...
+  * TCP_NODELAY set
+  * Connected to localhost (::1) port 9000 (#0)
+  > OPTIONS / HTTP/1.1
+  > Host: localhost:9000
+  > User-Agent: curl/7.51.0
+  > Accept: */*
+  >
+  < HTTP/1.1 200 OK
+  < Date: Sun, 18 Jun 2017 15:37:21 GMT
+  < Allow: GET, OPTIONS
+  < Content-type: text/plain; charset=utf-8
+  < Content-length: 0
+  <
+  * Curl_http_done: called premature == 0
+  * Connection #0 to host localhost left intact
+
+=== Package the class files as a modular JAR
+
+The class files by themselves are a bit inconvenient to ship,
+so let's build a modular JAR:
+
+  $ rm -rf build/jmods
+  $ mkdir -p build/jmods
+  $ jar --create --file build/jmods/http-server-1.0-SNAPSHOT.jar \
+      --main-class fi.linuxbox.http.Main \
+      -C build/classes/main .
+
+As you can see, there's nothing new here:
+our `javac` and `jar` invocations look exactly like they used to.
+
+=== Run the modular JAR
+
+Now running the application looks like this:
+
+  $ java --module-path build/jmods -m http.server
+
+We're just putting the JAR, instead of the class files, on the module path.
+Also, there's no need to specify the main class anymore.
+
+To verify that it works, you can go through the <<Test>> section again.
+
+=== Create a custom runtime
+
+The modular JAR is a fine distribution form for libraries,
+but for applications we can do a bit better.
+
+One of the coolest features in JDK 9, IMHO, is the `jlink` command.
+It allows you to build a custom runtime just for your app.
+
+For convenience,
+let's define an environment variable that points to the JDK modules.
+You will need to adjust the directory here,
+since this one is specific to my setup.
+You can find the `jmods` directory from within your Java installation.
+
+  $ export TARGET_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
+
+Now, here's the basic usage of `jlink`:
+
+  $ jlink --module-path build/jmods:$TARGET_JMODS \
+      --add-modules http.server \
+      --output build/jre/native
+
+It will analyze the `http.server` module dependencies transitively,
+and spit out a small runtime:
+
+  $ du -csh build/jre/native
+   36M    build/jre/native
+   36M    total
+  $ build/jre/native/bin/java --list-modules
+  http.server
+  java.base@9-ea
+  java.logging@9-ea
+  jdk.httpserver@9-ea
+
+So now you've got a 36MB directory that includes your app, its dependencies,
+and a `java` executable.
+You're down from 95 modules (94 for the JDK and 1 for your app)
+to just 4 modules.
+Nice :)
+
+=== Optimize the custom runtime
+
+Turns out that you can shrink the custom runtime even more.
+Let's build it again with some more flags:
+
+  $ rm -rf build/jre/native
+  $ jlink --module-path build/jmods:$TARGET_JMODS \
+        --strip-debug --vm server --compress 2 \
+        --class-for-name --no-header-files --no-man-pages \
+        --dedup-legal-notices=error-if-not-same-content \
+        --add-modules http.server \
+        --output build/jre/native
+  $ du -csh build/jre/native
+   21M    build/jre/native
+   21M    total
+
+That's more than 40% off of an already small base :)
+
+=== Run the module in the custom runtime
+
+Just to check that things are still working,
+you can run the app using the custom runtime like this:
+
+  $ ./build/jre/native/bin/java -m http.server
+
+And the <<Test>> section should look familiar by now.
+
+Now you could zip that directory and send it to everyone who's using the
+same platform as you are.  (That's why I chose the name `native`.)
+
+=== Containerize the custom runtime
+
+In order to be platform agnostic (this is Java app after all),
+we can Dockerize the custom runtime.
+
+NOTE: the custom runtime needs to be cross-compiled for Linux,
+because that's what's running in the container.
+Don't worry, JDK folks have made it child's play :)
+
+Most of the Linux distributions use the GNU C library known as glibc.
+Alpine Linux, in order to shrink the size of the distribution,
+is based on http://www.musl-libc.org/[musl C library].
+Hence, the "normal" Linux JDK builds are not compatible with that
+because they are linked against glibc.
+
+Luckily, http://openjdk.java.net/projects/portola/[Project Portola]
+ported the JDK to Alpine Linux,
+and their effort was already included in the JDK 9 EA build 171,
+released at the beginning of June 2017.
+
+==== Download and extract the target JDK(s)
+
+So, in order to cross-compile, you will need to download the target JDK.
+JRE is not enough.
+Head on to http://jdk.java.net/9/ and grab the Alpine Linux JDK.
+If you want to compare to a Linux distribution that is based on glibc,
+grab the Linux JDK, too.
+
+Then extract the JDK(s) somewhere.
+For example, I've got the Alpine JDK in `/Users/vmj/jdks/x64-musl/`
+and Linux JDK in `/Users/vmj/jdks/x64-linux/`.
+
+  $ cd /Users/vmj/jdks/x64-musl
+  $ tar xzf jdk-9-ea+171_linux-x64-musl_bin.tar.gz
+  $ cd ../x64-linux
+  $ tar xzf jdk-9-ea+174_linux-x64_bin.tar.gz
+
+==== Cross-compile the custom runtime(s)
+
+Point your `TARGET_JMODS` env var to the target JDK:
+
+  $ export TARGET_JMODS=/Users/vmj/jdks/x64-musl/jdk-9/jmods
+
+Now go back to the project directory and
+build the custom runtime for Alpine:
+
+  $ jlink --module-path build/jmods:$TARGET_JMODS \
+        --strip-debug --vm server --compress 2 \
+        --class-for-name --no-header-files --no-man-pages \
+        --dedup-legal-notices=error-if-not-same-content \
+        --add-modules http.server \
+        --output build/jre/alpine
+
+Note that we're now pointing the module path to the target JDK
+instead of that of the build host.
+`jlink`, which we launch from the build host JDK,
+will notice that we're cross-compiling,
+and it will spit out a different result.
+
+We're also changing the output directory,
+just so we can have multiple custom runtimes.
+
+You can optionally run `jlink` again
+with `TARGET_JMODS` pointing to the Linux JDK
+and with the option `--output build/jre/linux`.
+That will give you a glibc based runtime for comparison.
+
+  $ export TARGET_JMODS=/Users/vmj/jdks/x64-linux/jdk-9/jmods
+  $ jlink --module-path build/jmods:$TARGET_JMODS \
+        --strip-debug --vm server --compress 2 \
+        --class-for-name --no-header-files --no-man-pages \
+        --dedup-legal-notices=error-if-not-same-content \
+        --add-modules http.server \
+        --output build/jre/linux
+
+==== Prepare the Dockerfile(s)
+
+Let's create some simplistic Dockerfiles for our images:
+
+  $ rm -rf build/dockerfile
+  $ mkdir -p build/dockerfile
+  $ sed -e 's BASE_IMAGE alpine:3.5 ' Dockerfile.in >build/dockerfile/alpine
+  $ sed -e 's BASE_IMAGE vbatts/slackware:14.2 ' Dockerfile.in >build/dockerfile/linux
+
+The second `sed` invocation is optional.
+In it, you could also use `debian:stretch-slim` or
+pretty much any glibc based Linux distribution.
+
+==== Build the Docker image(s)
+
+Now we can do the docker dance.
+First create a docker build context:
+
+  $ rm -rf build/docker
+  $ mkdir -p build/docker
+
+Then copy the custom runtime and the `Dockerfile` to the build context:
+
+  $ cp -a build/jre/alpine build/docker/jre
+  $ cp build/dockerfile/alpine build/docker/Dockerfile
+
+Now you can upload the build context to the docker daemon and build the image:
+
+  $ (cd build/docker && docker build --tag vmj0/http-server-alpine-java9:1.0-SNAPSHOT .)
+
+And, you can do the same dance for Linux,
+just replacing alpine with linux in three places:
+
+  $ rm -rf build/docker
+  $ mkdir -p build/docker
+  $ cp -a build/jre/linux build/docker/jre
+  $ cp build/dockerfile/linux build/docker/Dockerfile
+  $ (cd build/docker && docker build --tag vmj0/http-server-linux-java9:1.0-SNAPSHOT .)
+
+==== Results
+
+The end result is that you've got a pretty small, but functional,
+docker image for a Java app:
+
+  $ docker images
+  REPOSITORY                      TAG                 IMAGE ID            CREATED                  SIZE
+  vmj0/http-server-linux-java9    1.0-SNAPSHOT        ed3c1beae667        Less than a second ago   116 MB
+  vmj0/http-server-alpine-java9   1.0-SNAPSHOT        a618cbdd533a        3 seconds ago            35 MB
+  vmj0/http-server-alpine-java8   1.0-SNAPSHOT        5cf2d08c67b0        3 hours ago              81.4 MB
+  openjdk                         8-jre-alpine        43f475d356af        43 hours ago             81.4 MB
+  vbatts/slackware                14.2                0d62d63d29e6        3 days ago               84.8 MB
+  alpine                          3.5                 75b63e430bd1        3 weeks ago              3.99 MB
+
+As can be seen from above, the `vmj0/http-server-alpine-java9` is less than
+half of the `vmj0/http-server-alpine-java8`.
+The latter is based on `openjdk:8-jre-alpine`.
+
+=== Run the container image
+
+Running the container is old news:
+
+  docker run --rm -it -p9000:9000 vmj0/http-server-alpine-java9:1.0-SNAPSHOT
+
+And checking that it works is... yes, in the <<Test>> section.
+
+=== One more thing
+
+You probably noticed the `Makefile`.
+It's optional, since I've shown you above how to do things,
+but the `Makefile` contains all the above commands.
+
+If you've got GNU make, try invoking `make help`.
+Or do the following (adjusting variables, naturally) and read the help later:
+
+  $ export NATIVE_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
+  $ export ALPINE_JMODS=/Users/vmj/jdks/x64-musl/jdk-9/jmods
+  $ export LINUX_JMODS=/Users/vmj/jdks/x64-linux/jdk-9/jmods
+  $ for target in native alpine linux ; do make jre TARGET=$target ; done
+  $ export DOCKER_NAME=vmj0
+  $ for target in alpine linux ; do make dockerImage TARGET=$target ; done
+
+Have fun!
