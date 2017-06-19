@@ -6,7 +6,8 @@ MAIN_CLASS = fi.linuxbox.http.Main
 
 OTHER_CLASSES = module-info
 
-DOCKER_TAG = vmj0/http-server-$(TARGET)-java9:$(VERSION)
+DOCKER_NAME ?= vmj0
+DOCKER_TAG = $(DOCKER_NAME)/http-server-$(TARGET)-java9:$(VERSION)
 
 #
 # Use TARGET env var to switch custom runtime target.
@@ -113,6 +114,8 @@ help:
 	@echo
 	@echo Influential environment variables:
 	@echo
+	@echo "  DOCKER_NAME                                           "
+	@echo "    DockerHub user name                                 "
 	@echo "  NATIVE_JMODS                                          "
 	@echo "    Full path the the jmods directory of native target. "
 	@echo "  ALPINE_JMODS                                          "

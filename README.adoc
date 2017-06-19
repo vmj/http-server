@@ -330,12 +330,13 @@ It's optional, since I've shown you above how to do things,
 but the `Makefile` contains all the above commands.
 
 If you've got GNU make, try invoking `make help`.
-Or do the following (adjusting paths, naturally) and read the help later:
+Or do the following (adjusting variables, naturally) and read the help later:
 
   $ export NATIVE_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
   $ export ALPINE_JMODS=/Users/vmj/jdks/x64-musl/jdk-9/jmods
   $ export LINUX_JMODS=/Users/vmj/jdks/x64-linux/jdk-9/jmods
   $ for target in native alpine linux ; do make jre TARGET=$target ; done
+  $ export DOCKER_NAME=vmj0
   $ for target in alpine linux ; do make dockerImage TARGET=$target ; done
 
 Have fun!
