@@ -292,7 +292,7 @@ Then copy the custom runtime and the `Dockerfile` to the build context:
 
 Now you can upload the build context to the docker daemon and build the image:
 
-  $ (cd build/docker && docker build --tag vmj0/http-server-alpine:1.0-SNAPSHOT .)
+  $ (cd build/docker && docker build --tag vmj0/http-server-alpine-java9:1.0-SNAPSHOT .)
 
 And, you can do the same dance for Linux,
 just replacing alpine with linux in three places:
@@ -301,7 +301,7 @@ just replacing alpine with linux in three places:
   $ mkdir -p build/docker
   $ cp -a build/jre/linux build/docker/jre
   $ cp build/dockerfile/linux build/docker/Dockerfile
-  $ (cd build/docker && docker build --tag vmj0/http-server-linux:1.0-SNAPSHOT .)
+  $ (cd build/docker && docker build --tag vmj0/http-server-linux-java9:1.0-SNAPSHOT .)
 
 ==== Results
 
@@ -309,17 +309,17 @@ The end result is that you've got a pretty small, but functional,
 docker image for a Java app:
 
   $ docker images
-  REPOSITORY                TAG                 IMAGE ID            CREATED             SIZE
-  vmj0/http-server-linux    1.0-SNAPSHOT        81f0fd0d7c8e        8 seconds ago       116 MB
-  vmj0/http-server-alpine   1.0-SNAPSHOT        c2d0d7dceabc        14 seconds ago      35 MB
-  vbatts/slackware          14.2                0d62d63d29e6        3 days ago          84.8 MB
-  alpine                    3.5                 75b63e430bd1        3 weeks ago         3.99 MB
+  REPOSITORY                      TAG                 IMAGE ID            CREATED                  SIZE
+  vmj0/http-server-linux-java9    1.0-SNAPSHOT        ed3c1beae667        Less than a second ago   116 MB
+  vmj0/http-server-alpine-java9   1.0-SNAPSHOT        a618cbdd533a        3 seconds ago            35 MB
+  vbatts/slackware                14.2                0d62d63d29e6        3 days ago               84.8 MB
+  alpine                          3.5                 75b63e430bd1        3 weeks ago              3.99 MB
 
 === Run the container image
 
 Running the container is old news:
 
-  docker run --rm -it -p9000:9000 vmj0/http-server-alpine:1.0-SNAPSHOT
+  docker run --rm -it -p9000:9000 vmj0/http-server-alpine-java9:1.0-SNAPSHOT
 
 And checking that it works is... yes, in the <<Test>> section.
 

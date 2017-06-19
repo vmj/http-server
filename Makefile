@@ -6,7 +6,7 @@ MAIN_CLASS = fi.linuxbox.http.Main
 
 OTHER_CLASSES = module-info
 
-DOCKER_TAG = vmj0/http-server-$(TARGET):$(VERSION)
+DOCKER_TAG = vmj0/http-server-$(TARGET)-java9:$(VERSION)
 
 #
 # Use TARGET env var to switch custom runtime target.
