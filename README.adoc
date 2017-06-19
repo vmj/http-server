@@ -339,6 +339,7 @@ but the `Makefile` contains all the above commands.
 If you've got GNU make, try invoking `make help`.
 Or do the following (adjusting variables, naturally) and read the help later:
 
+  $ unset TARGET_JMODS
   $ export NATIVE_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
   $ export ALPINE_JMODS=/Users/vmj/jdks/x64-musl/jdk-9/jmods
   $ export LINUX_JMODS=/Users/vmj/jdks/x64-linux/jdk-9/jmods
