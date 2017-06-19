@@ -120,6 +120,9 @@ help:
 	@echo "  LINUX_JMODS                                           "
 	@echo "    Full path the the jmods directory of linux target.  "
 
+clean:
+	-@rm -rf $(BUILD_DIR)
+
 classes: $(CLASS_FILES)
 jar: $(ARTIFACT_FILE)
 jre: $(CUSTOM_RUNTIME_DIR)
