@@ -312,8 +312,14 @@ docker image for a Java app:
   REPOSITORY                      TAG                 IMAGE ID            CREATED                  SIZE
   vmj0/http-server-linux-java9    1.0-SNAPSHOT        ed3c1beae667        Less than a second ago   116 MB
   vmj0/http-server-alpine-java9   1.0-SNAPSHOT        a618cbdd533a        3 seconds ago            35 MB
+  vmj0/http-server-alpine-java8   1.0-SNAPSHOT        5cf2d08c67b0        3 hours ago              81.4 MB
+  openjdk                         8-jre-alpine        43f475d356af        43 hours ago             81.4 MB
   vbatts/slackware                14.2                0d62d63d29e6        3 days ago               84.8 MB
   alpine                          3.5                 75b63e430bd1        3 weeks ago              3.99 MB
+
+As can be seen from above, the `vmj0/http-server-alpine-java9` is less than
+half of the `vmj0/http-server-alpine-java8`.
+The latter is based on `openjdk:8-jre-alpine`.
 
 === Run the container image
 
