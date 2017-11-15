@@ -340,7 +340,8 @@ And checking that it works is... yes, in the <<Test>> section.
 === Multistage Dockerfile
 
 You can build the small docker image in one command using the `Dockerfile.multistage`,
-which was contributed by @StevenACoffman (thanks!):
+which was contributed by https://github.com/StevenACoffman[@StevenACoffman] (thanks!).
+For example:
 
   docker build  -f Dockerfile.multistage --tag vmj0/http-server-multistage:1.0-SNAPSHOT .
 
