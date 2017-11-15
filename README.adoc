@@ -337,7 +337,14 @@ Running the container is old news:
 
 And checking that it works is... yes, in the <<Test>> section.
 
-=== One more thing
+=== Multistage Dockerfile
+
+You can build the small docker image in one command using the `Dockerfile.multistage`,
+which was contributed by @StevenACoffman (thanks!):
+
+  docker build  -f Dockerfile.multistage --tag vmj0/http-server-multistage:1.0-SNAPSHOT .
+
+=== Makefile
 
 You probably noticed the `Makefile`.
 It's optional, since I've shown you above how to do things,
