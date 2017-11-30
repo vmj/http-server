@@ -23,20 +23,39 @@ and community has maintained a patched JRE for Java people.
 That was fine for a long time,
 but now we no longer have to use an unofficial JRE.
 
+=== Results
+
+The end result will be that you've got a pretty small, but functional,
+docker image for a Java app:
+
+  $ docker images
+  REPOSITORY                      TAG                 IMAGE ID            CREATED                  SIZE
+  vmj0/http-server-linux-java9    1.0-SNAPSHOT        ed3c1beae667        Less than a second ago   100MB
+  vmj0/http-server-alpine-java9   1.0-SNAPSHOT        a618cbdd533a        3 seconds ago            35MB
+  vmj0/http-server-alpine-java8   1.0-SNAPSHOT        5cf2d08c67b0        3 hours ago              81.4MB
+  openjdk                         8-jre-alpine        b36ec9de53a8        3 weeks ago              81.4MB
+  vbatts/slackware                13.37               0d62d63d29e6        5 weeks ago              69.8MB
+  alpine                          3.6                 053cde6e8953        3 weeks ago              3.97MB
+
+As can be seen from above, the `vmj0/http-server-alpine-java9` is less than
+half of the `vmj0/http-server-alpine-java8`.
+The latter is based on `openjdk:8-jre-alpine`.
+
+
 === Starting point
 
-You will need a recent Early Access JDK 9.
+You will need a recent JDK 9.
 
   $ java -version
-  java version "9-ea"
-  Java(TM) SE Runtime Environment (build 9-ea+174)
-  Java HotSpot(TM) 64-Bit Server VM (build 9-ea+174, mixed mode)
+  java version "9.0.1"
+  Java(TM) SE Runtime Environment (build 9.0.1+11)
+  Java HotSpot(TM) 64-Bit Server VM (build 9.0.1+11, mixed mode)
 
 As you probably know, JDK was modularized.
 Let's see how many modules this JDK alone has:
 
   $ java --list-modules |wc -l
-        94
+        97
 
 In order to follow these steps, you will also need Docker and git installed.
 
@@ -90,7 +109,7 @@ And `OPTIONS` (note the `Allow` header in the response):
   * Connected to localhost (::1) port 9000 (#0)
   > OPTIONS / HTTP/1.1
   > Host: localhost:9000
-  > User-Agent: curl/7.51.0
+  > User-Agent: curl/7.54.0
   > Accept: */*
   >
   < HTTP/1.1 200 OK
@@ -99,7 +118,6 @@ And `OPTIONS` (note the `Allow` header in the response):
   < Content-type: text/plain; charset=utf-8
   < Content-length: 0
   <
-  * Curl_http_done: called premature == 0
   * Connection #0 to host localhost left intact
 
 === Package the class files as a modular JAR
@@ -141,7 +159,7 @@ You will need to adjust the directory here,
 since this one is specific to my setup.
 You can find the `jmods` directory from within your Java installation.
 
-  $ export TARGET_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
+  $ export TARGET_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.0.1.jdk/Contents/Home/jmods
 
 Now, here's the basic usage of `jlink`:
 
@@ -157,13 +175,13 @@ and spit out a small runtime:
    36M    total
   $ build/jre/native/bin/java --list-modules
   http.server
-  java.base@9-ea
-  java.logging@9-ea
-  jdk.httpserver@9-ea
+  java.base@9.0.1
+  java.logging@9.0.1
+  jdk.httpserver@9.0.1
 
 So now you've got a 36MB directory that includes your app, its dependencies,
 and a `java` executable.
-You're down from 95 modules (94 for the JDK and 1 for your app)
+You're down from 98 modules (97 for the JDK and 1 for your app)
 to just 4 modules.
 Nice :)
 
@@ -175,13 +193,14 @@ Let's build it again with some more flags:
   $ rm -rf build/jre/native
   $ jlink --module-path build/jmods:$TARGET_JMODS \
         --strip-debug --vm server --compress 2 \
-        --class-for-name --no-header-files --no-man-pages \
+        --class-for-name \
+        --exclude-jmod-section=headers --exclude-jmod-section=man \
         --dedup-legal-notices=error-if-not-same-content \
         --add-modules http.server \
         --output build/jre/native
   $ du -csh build/jre/native
-   21M    build/jre/native
-   21M    total
+   22M    build/jre/native
+   22M    total
 
 That's more than 40% off of an already small base :)
 
@@ -216,23 +235,26 @@ Luckily, http://openjdk.java.net/projects/portola/[Project Portola]
 ported the JDK to Alpine Linux,
 and their effort was already included in the JDK 9 EA build 171,
 released at the beginning of June 2017.
+As of this writing,
+the latest JDK 9 for Alpine Linux is build 181
+available at the http://jdk.java.net/9/ea[Early Access] page.
 
 ==== Download and extract the target JDK(s)
 
 So, in order to cross-compile, you will need to download the target JDK.
 JRE is not enough.
-Head on to http://jdk.java.net/9/ and grab the Alpine Linux JDK.
+Head on to http://jdk.java.net/9/ea and grab the Alpine Linux JDK.
 If you want to compare to a Linux distribution that is based on glibc,
-grab the Linux JDK, too.
+grab the Linux JDK, too, from http://jdk.java.net/9/
 
 Then extract the JDK(s) somewhere.
 For example, I've got the Alpine JDK in `/Users/vmj/jdks/x64-musl/`
 and Linux JDK in `/Users/vmj/jdks/x64-linux/`.
 
   $ cd /Users/vmj/jdks/x64-musl
-  $ tar xzf jdk-9-ea+171_linux-x64-musl_bin.tar.gz
+  $ tar xzf jdk-9-ea+181_linux-x64-musl_bin.tar.gz
   $ cd ../x64-linux
-  $ tar xzf jdk-9-ea+174_linux-x64_bin.tar.gz
+  $ tar xzf openjdk-9.0.1_linux-x64_bin.tar.gz
 
 ==== Cross-compile the custom runtime(s)
 
@@ -245,7 +267,8 @@ build the custom runtime for Alpine:
 
   $ jlink --module-path build/jmods:$TARGET_JMODS \
         --strip-debug --vm server --compress 2 \
-        --class-for-name --no-header-files --no-man-pages \
+        --class-for-name \
+        --exclude-jmod-section=headers --exclude-jmod-section=man \
         --dedup-legal-notices=error-if-not-same-content \
         --add-modules http.server \
         --output build/jre/alpine
@@ -264,10 +287,11 @@ with `TARGET_JMODS` pointing to the Linux JDK
 and with the option `--output build/jre/linux`.
 That will give you a glibc based runtime for comparison.
 
-  $ export TARGET_JMODS=/Users/vmj/jdks/x64-linux/jdk-9/jmods
+  $ export TARGET_JMODS=/Users/vmj/jdks/x64-linux/jdk-9.0.1/jmods
   $ jlink --module-path build/jmods:$TARGET_JMODS \
         --strip-debug --vm server --compress 2 \
-        --class-for-name --no-header-files --no-man-pages \
+        --class-for-name \
+        --exclude-jmod-section=headers --exclude-jmod-section=man \
         --dedup-legal-notices=error-if-not-same-content \
         --add-modules http.server \
         --output build/jre/linux
@@ -278,8 +302,8 @@ Let's create some simplistic Dockerfiles for our images:
 
   $ rm -rf build/dockerfile
   $ mkdir -p build/dockerfile
-  $ sed -e 's BASE_IMAGE alpine:3.5 ' Dockerfile.in >build/dockerfile/alpine
-  $ sed -e 's BASE_IMAGE vbatts/slackware:14.2 ' Dockerfile.in >build/dockerfile/linux
+  $ sed -e 's BASE_IMAGE alpine:3.6 ' Dockerfile.in >build/dockerfile/alpine
+  $ sed -e 's BASE_IMAGE vbatts/slackware:13.37 ' Dockerfile.in >build/dockerfile/linux
 
 The second `sed` invocation is optional.
 In it, you could also use `debian:stretch-slim` or
@@ -311,24 +335,6 @@ just replacing alpine with linux in three places:
   $ cp build/dockerfile/linux build/docker/Dockerfile
   $ (cd build/docker && docker build --tag vmj0/http-server-linux-java9:1.0-SNAPSHOT .)
 
-==== Results
-
-The end result is that you've got a pretty small, but functional,
-docker image for a Java app:
-
-  $ docker images
-  REPOSITORY                      TAG                 IMAGE ID            CREATED                  SIZE
-  vmj0/http-server-linux-java9    1.0-SNAPSHOT        ed3c1beae667        Less than a second ago   116 MB
-  vmj0/http-server-alpine-java9   1.0-SNAPSHOT        a618cbdd533a        3 seconds ago            35 MB
-  vmj0/http-server-alpine-java8   1.0-SNAPSHOT        5cf2d08c67b0        3 hours ago              81.4 MB
-  openjdk                         8-jre-alpine        43f475d356af        43 hours ago             81.4 MB
-  vbatts/slackware                14.2                0d62d63d29e6        3 days ago               84.8 MB
-  alpine                          3.5                 75b63e430bd1        3 weeks ago              3.99 MB
-
-As can be seen from above, the `vmj0/http-server-alpine-java9` is less than
-half of the `vmj0/http-server-alpine-java8`.
-The latter is based on `openjdk:8-jre-alpine`.
-
 === Run the container image
 
 Running the container is old news:
@@ -337,15 +343,21 @@ Running the container is old news:
 
 And checking that it works is... yes, in the <<Test>> section.
 
-=== Multistage Dockerfile
+=== Some addition options
 
-You can build the small docker image in one command using the `Dockerfile.multistage`,
+Above is all very tedious.
+But now that the process is known, you can use whatever build tool that you're comfortable with.
+Here are a couple of examples.
+
+==== Multistage Dockerfile
+
+You can build the Alpine Docker image in one command using the `Dockerfile.multistage`,
 which was contributed by https://github.com/StevenACoffman[@StevenACoffman] (thanks!).
 For example:
 
-  docker build  -f Dockerfile.multistage --tag vmj0/http-server-multistage:1.0-SNAPSHOT .
+  docker build -f Dockerfile.multistage --tag vmj0/http-server-multistage:1.0-SNAPSHOT .
 
-=== Makefile
+==== Makefile
 
 You probably noticed the `Makefile`.
 It's optional, since I've shown you above how to do things,
@@ -355,9 +367,9 @@ If you've got GNU make, try invoking `make help`.
 Or do the following (adjusting variables, naturally) and read the help later:
 
   $ unset TARGET_JMODS
-  $ export NATIVE_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
+  $ export NATIVE_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.0.1.jdk/Contents/Home/jmods
   $ export ALPINE_JMODS=/Users/vmj/jdks/x64-musl/jdk-9/jmods
-  $ export LINUX_JMODS=/Users/vmj/jdks/x64-linux/jdk-9/jmods
+  $ export LINUX_JMODS=/Users/vmj/jdks/x64-linux/jdk-9.0.1/jmods
   $ for target in native alpine linux ; do make jre TARGET=$target ; done
   $ export DOCKER_NAME=vmj0
   $ for target in alpine linux ; do make dockerImage TARGET=$target ; done

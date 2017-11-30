@@ -21,9 +21,9 @@ TARGET ?= native
 # Download and extract the target JDKs,
 # then export following env vars with the correct directories.
 #
-NATIVE_JMODS ?= /Library/Java/JavaVirtualMachines/jdk-9.jdk/Contents/Home/jmods
+NATIVE_JMODS ?= /Library/Java/JavaVirtualMachines/jdk-9.0.1.jdk/Contents/Home/jmods
 ALPINE_JMODS ?= /Users/vmj/jdks/x64-musl/jdk-9/jmods
-LINUX_JMODS ?= /Users/vmj/jdks/x64-linux/jdk-9/jmods
+LINUX_JMODS ?= /Users/vmj/jdks/x64-linux/jdk-9.0.1/jmods
 
 ifeq ($(TARGET),native)
 #
@@ -38,7 +38,7 @@ ifeq ($(TARGET),alpine)
 # This is for building a custom runtime for Alpine Linux and running it
 # in Docker.
 #
-BASE_IMAGE = alpine:3.5
+BASE_IMAGE = alpine:3.6
 TARGET_JMODS ?= $(ALPINE_JMODS)
 
 else
@@ -47,7 +47,7 @@ ifeq ($(TARGET),linux)
 # This is for building a custom runtime for pretty much any glibc based
 # Linux distro.  E.g. Debian would do, too: debian:stretch-slim
 #
-BASE_IMAGE = vbatts/slackware:14.2
+BASE_IMAGE = vbatts/slackware:13.37
 TARGET_JMODS ?= $(LINUX_JMODS)
 
 else
@@ -157,7 +157,8 @@ $(CUSTOM_RUNTIME_DIR): $(ARTIFACT_FILE) $(TARGET_JMODS)
 	@rm -rf $(CUSTOM_RUNTIME_DIR)
 	jlink --module-path $(JMODS_DIR):$(TARGET_JMODS) \
 	      --strip-debug --vm server --compress 2 \
-	      --class-for-name --no-header-files --no-man-pages \
+	      --class-for-name \
+	      --exclude-jmod-section=headers --exclude-jmod-section=man \
 	      --dedup-legal-notices=error-if-not-same-content \
 	      --add-modules $(MODULE_ID) \
 	      --output $@
