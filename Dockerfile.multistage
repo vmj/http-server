@@ -1,7 +1,7 @@
 FROM alpine:3.6 as builder
 
 #
-# Download the JDK 9 for Alpine Linux distribution
+# Download the JDK 11 for Alpine Linux distribution
 #
 ARG OPENJDK11_ALPINE_URL=https://download.java.net/java/early_access/alpine/11/binaries/openjdk-11-ea+11_linux-x64-musl_bin.tar.gz
 RUN apk update \
