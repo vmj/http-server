@@ -1,8 +1,8 @@
-== Smaller Java 9 apps in Docker
+== Smaller Java apps in Docker
 
 image:https://travis-ci.org/vmj/http-server.svg?branch=master["Build Status", link="https://travis-ci.org/vmj/http-server/branches"]
 
-This project showcases what is in my opinion the coolest features in JDK 9:
+This project showcases two features of the JDK:
 
  * ability to create custom runtime for your application
  * native support for Alpine Linux
@@ -29,33 +29,34 @@ The end result will be that you've got a pretty small, but functional,
 docker image for a Java app:
 
   $ docker images
-  REPOSITORY                      TAG                 IMAGE ID            CREATED                  SIZE
-  vmj0/http-server-linux-java9    1.0-SNAPSHOT        ed3c1beae667        Less than a second ago   100MB
-  vmj0/http-server-alpine-java9   1.0-SNAPSHOT        a618cbdd533a        3 seconds ago            35MB
-  vmj0/http-server-alpine-java8   1.0-SNAPSHOT        5cf2d08c67b0        3 hours ago              81.4MB
-  openjdk                         8-jre-alpine        b36ec9de53a8        3 weeks ago              81.4MB
-  vbatts/slackware                13.37               0d62d63d29e6        5 weeks ago              69.8MB
-  alpine                          3.6                 053cde6e8953        3 weeks ago              3.97MB
+  REPOSITORY                     TAG           IMAGE ID      CREATED         SIZE
+  vmj0/http-server-linux-java11  1.0-SNAPSHOT  ef252ec83afd  11 minutes ago  101MB
+  vmj0/http-server-alpine-java11 1.0-SNAPSHOT  7854466a32f3  12 minutes ago  35.2MB
+  alpine                         3.6           77144d8c6bdc  3 months ago    3.97MB
+  vbatts/slackware               13.37         777ef0cd51ed  6 months ago    69.8MB
 
-As can be seen from above, the `vmj0/http-server-alpine-java9` is less than
-half of the `vmj0/http-server-alpine-java8`.
-The latter is based on `openjdk:8-jre-alpine`.
+As can be seen from above, the `vmj0/http-server-alpine-java11` is less than
+half of the `vmj0/http-server-linux-java11`.
+The latter is based on a typical linux distro, `vbatts/slackware` in this case.
 
+Below, I will show you the commands you can use to manually come up with above result.
+It will be a lot of typing, and in reality you would use a build tool to automate it.
 
 === Starting point
 
-You will need a recent JDK 9.
+You will need a recent JDK, version 9 or above.
+I'm using JDK 9 even though it has been obsoleted by JDK 10.
 
   $ java -version
-  java version "9.0.1"
-  Java(TM) SE Runtime Environment (build 9.0.1+11)
-  Java HotSpot(TM) 64-Bit Server VM (build 9.0.1+11, mixed mode)
+  openjdk version "9.0.4"
+  OpenJDK Runtime Environment (build 9.0.4+11)
+  OpenJDK 64-Bit Server VM (build 9.0.4+11, mixed mode)
 
 As you probably know, JDK was modularized.
 Let's see how many modules this JDK alone has:
 
   $ java --list-modules |wc -l
-        97
+        73
 
 In order to follow these steps, you will also need Docker and git installed.
 
@@ -150,7 +151,7 @@ To verify that it works, you can go through the <<Test>> section again.
 The modular JAR is a fine distribution form for libraries,
 but for applications we can do a bit better.
 
-One of the coolest features in JDK 9, IMHO, is the `jlink` command.
+One of the coolest features that came with JDK 9, IMHO, is the `jlink` command.
 It allows you to build a custom runtime just for your app.
 
 For convenience,
@@ -159,7 +160,12 @@ You will need to adjust the directory here,
 since this one is specific to my setup.
 You can find the `jmods` directory from within your Java installation.
 
-  $ export TARGET_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.0.1.jdk/Contents/Home/jmods
+  $ export TARGET_JMODS=/Users/vmj/.sdkman/candidates/java/9.0.4-openjdk/jmods
+
+NOTE: While you can use JDK 9 to compile and package (as a JAR) your code,
+you can't use JDK 9 `jlink` if you are building a custom runtime for Java 10 or 11.
+The major version number of `jlink` has to match the major version number of the JDK modules.
+We will address this further down.
 
 Now, here's the basic usage of `jlink`:
 
@@ -171,17 +177,17 @@ It will analyze the `http.server` module dependencies transitively,
 and spit out a small runtime:
 
   $ du -csh build/jre/native
-   36M    build/jre/native
-   36M    total
+   35M    build/jre/native
+   35M    total
   $ build/jre/native/bin/java --list-modules
   http.server
-  java.base@9.0.1
-  java.logging@9.0.1
-  jdk.httpserver@9.0.1
+  java.base@9.0.4
+  java.logging@9.0.4
+  jdk.httpserver@9.0.4
 
-So now you've got a 36MB directory that includes your app, its dependencies,
+So now you've got a 35MB directory that includes your app, its dependencies,
 and a `java` executable.
-You're down from 98 modules (97 for the JDK and 1 for your app)
+You're down from 74 modules (73 for the JDK and 1 for your app)
 to just 4 modules.
 Nice :)
 
@@ -199,8 +205,8 @@ Let's build it again with some more flags:
         --add-modules http.server \
         --output build/jre/native
   $ du -csh build/jre/native
-   22M    build/jre/native
-   22M    total
+   21M    build/jre/native
+   21M    total
 
 That's more than 40% off of an already small base :)
 
@@ -236,36 +242,50 @@ ported the JDK to Alpine Linux,
 and their effort was already included in the JDK 9 EA build 171,
 released at the beginning of June 2017.
 As of this writing,
-the latest JDK 9 for Alpine Linux is build 181
-available at the http://jdk.java.net/9/ea[Early Access] page.
+there doesn't seem to be JDK 9 or 10 builds available anymore,
+but the latest JDK 11 for Alpine Linux is
+available at the http://jdk.java.net/11/[Early Access] page.
 
 ==== Download and extract the target JDK(s)
 
 So, in order to cross-compile, you will need to download the target JDK.
 JRE is not enough.
-Head on to http://jdk.java.net/9/ea and grab the Alpine Linux JDK.
+Also, you will need a matching native JDK for the linking to work.
+
+You don't have to install these JDKs, just extract them somewhere.
+
+Head on to http://jdk.java.net/11/ and grab your native JDK
+and the Alpine Linux JDK.
 If you want to compare to a Linux distribution that is based on glibc,
-grab the Linux JDK, too, from http://jdk.java.net/9/
+grab the Linux JDK, too. (Unless that happens to be your native platform.)
 
 Then extract the JDK(s) somewhere.
 For example, I've got the Alpine JDK in `/Users/vmj/jdks/x64-musl/`
 and Linux JDK in `/Users/vmj/jdks/x64-linux/`.
 
-  $ cd /Users/vmj/jdks/x64-musl
-  $ tar xzf jdk-9-ea+181_linux-x64-musl_bin.tar.gz
+  $ cd ~/jdks/x64-musl
+  $ tar xzf openjdk-11-ea+11_linux-x64-musl_bin.tar.gz
   $ cd ../x64-linux
-  $ tar xzf openjdk-9.0.1_linux-x64_bin.tar.gz
+  $ tar xzf openjdk-11-ea+12_linux-x64_bin.tar.gz
+  $ cd ../x64-osx
+  $ tar xzf openjdk-11-ea+12_osx-x64_bin.tar.gz
+
 
 ==== Cross-compile the custom runtime(s)
 
-Point your `TARGET_JMODS` env var to the target JDK:
+Point your `TARGET_JMODS` env var to the target JDK.  Here I'm pointing it to Alpine Linux modules:
 
-  $ export TARGET_JMODS=/Users/vmj/jdks/x64-musl/jdk-9/jmods
+  $ export TARGET_JMODS=/Users/vmj/jdks/x64-musl/jdk-11/jmods
+
+And for convenience, point `JLINK` env var to the matching native `jlink`.
+Since I have JDK 9 as my regular JDK, I point the `JLINK` to the JDK 11 version I extracted above:
+
+  $ export JLINK=/Users/vmj/jdks/x64-osx/jdk-11.jdk/Contents/Home/bin/jlink
 
 Now go back to the project directory and
 build the custom runtime for Alpine:
 
-  $ jlink --module-path build/jmods:$TARGET_JMODS \
+  $ $JLINK --module-path build/jmods:$TARGET_JMODS \
         --strip-debug --vm server --compress 2 \
         --class-for-name \
         --exclude-jmod-section=headers --exclude-jmod-section=man \
@@ -275,7 +295,7 @@ build the custom runtime for Alpine:
 
 Note that we're now pointing the module path to the target JDK
 instead of that of the build host.
-`jlink`, which we launch from the build host JDK,
+`jlink`, which we launch from the native JDK,
 will notice that we're cross-compiling,
 and it will spit out a different result.
 
@@ -287,8 +307,8 @@ with `TARGET_JMODS` pointing to the Linux JDK
 and with the option `--output build/jre/linux`.
 That will give you a glibc based runtime for comparison.
 
-  $ export TARGET_JMODS=/Users/vmj/jdks/x64-linux/jdk-9.0.1/jmods
-  $ jlink --module-path build/jmods:$TARGET_JMODS \
+  $ export TARGET_JMODS=/Users/vmj/jdks/x64-linux/jdk-11/jmods
+  $ $JLINK --module-path build/jmods:$TARGET_JMODS \
         --strip-debug --vm server --compress 2 \
         --class-for-name \
         --exclude-jmod-section=headers --exclude-jmod-section=man \
@@ -324,7 +344,7 @@ Then copy the custom runtime and the `Dockerfile` to the build context:
 
 Now you can upload the build context to the docker daemon and build the image:
 
-  $ (cd build/docker && docker build --tag vmj0/http-server-alpine-java9:1.0-SNAPSHOT .)
+  $ (cd build/docker && docker build --tag vmj0/http-server-alpine-java11:1.0-SNAPSHOT .)
 
 And, you can do the same dance for Linux,
 just replacing alpine with linux in three places:
@@ -333,13 +353,13 @@ just replacing alpine with linux in three places:
   $ mkdir -p build/docker
   $ cp -a build/jre/linux build/docker/jre
   $ cp build/dockerfile/linux build/docker/Dockerfile
-  $ (cd build/docker && docker build --tag vmj0/http-server-linux-java9:1.0-SNAPSHOT .)
+  $ (cd build/docker && docker build --tag vmj0/http-server-linux-java11:1.0-SNAPSHOT .)
 
 === Run the container image
 
 Running the container is old news:
 
-  docker run --rm -it -p9000:9000 vmj0/http-server-alpine-java9:1.0-SNAPSHOT
+  docker run --rm -it -p9000:9000 vmj0/http-server-alpine-java11:1.0-SNAPSHOT
 
 And checking that it works is... yes, in the <<Test>> section.
 
@@ -367,9 +387,9 @@ If you've got GNU make, try invoking `make help`.
 Or do the following (adjusting variables, naturally) and read the help later:
 
   $ unset TARGET_JMODS
-  $ export NATIVE_JMODS=/Library/Java/JavaVirtualMachines/jdk-9.0.1.jdk/Contents/Home/jmods
-  $ export ALPINE_JMODS=/Users/vmj/jdks/x64-musl/jdk-9/jmods
-  $ export LINUX_JMODS=/Users/vmj/jdks/x64-linux/jdk-9.0.1/jmods
+  $ export NATIVE_JMODS=/Users/vmj/jdks/x64-osx/jdk-11.jdk/Contents/Home/jmods
+  $ export ALPINE_JMODS=/Users/vmj/jdks/x64-musl/jdk-11/jmods
+  $ export LINUX_JMODS=/Users/vmj/jdks/x64-linux/jdk-11/jmods
   $ for target in native alpine linux ; do make jre TARGET=$target ; done
   $ export DOCKER_NAME=vmj0
   $ for target in alpine linux ; do make dockerImage TARGET=$target ; done

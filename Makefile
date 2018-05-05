@@ -7,7 +7,7 @@ MAIN_CLASS = fi.linuxbox.http.Main
 OTHER_CLASSES = module-info
 
 DOCKER_NAME ?= vmj0
-DOCKER_TAG = $(DOCKER_NAME)/http-server-$(TARGET)-java9:$(VERSION)
+DOCKER_TAG = $(DOCKER_NAME)/http-server-$(TARGET)-java11:$(VERSION)
 
 #
 # Use TARGET env var to switch custom runtime target.
@@ -21,9 +21,12 @@ TARGET ?= native
 # Download and extract the target JDKs,
 # then export following env vars with the correct directories.
 #
-NATIVE_JMODS ?= /Library/Java/JavaVirtualMachines/jdk-9.0.1.jdk/Contents/Home/jmods
-ALPINE_JMODS ?= /Users/vmj/jdks/x64-musl/jdk-9/jmods
-LINUX_JMODS ?= /Users/vmj/jdks/x64-linux/jdk-9.0.1/jmods
+# Note: you can use javac and jar from Java 9 or 10, but jlink has
+# to have the same major version as the target.
+#
+NATIVE_JMODS ?= /Users/vmj/jdks/x64-osx/jdk-11.jdk/Contents/Home/jmods
+ALPINE_JMODS ?= /Users/vmj/jdks/x64-musl/jdk-11/jmods
+LINUX_JMODS  ?= /Users/vmj/jdks/x64-linux/jdk-11/jmods
 
 ifeq ($(TARGET),native)
 #
@@ -85,6 +88,9 @@ SRC_FILES   = $(subst .,/,$(MAIN_CLASS) $(OTHER_CLASSES))
 # Turn the paths to .class and .java file names (with full path)
 CLASS_FILES = $(patsubst %,$(CLASSES_DIR)/%.class,$(SRC_FILES))
 JAVA_FILES  = $(patsubst %,$(JAVA_SRC_DIR)/%.java,$(SRC_FILES))
+
+# jlink command
+JLINK = "$(dir $(NATIVE_JMODS))bin/jlink"
 
 .PHONY: classes classesRun jar jarRun jre jreRun dockerfile dockerImage dockerRun
 
@@ -155,10 +161,10 @@ $(ARTIFACT_FILE): $(CLASS_FILES)
 
 $(CUSTOM_RUNTIME_DIR): $(ARTIFACT_FILE) $(TARGET_JMODS)
 	@rm -rf $(CUSTOM_RUNTIME_DIR)
-	jlink --module-path $(JMODS_DIR):$(TARGET_JMODS) \
+	$(JLINK) --module-path $(JMODS_DIR):$(TARGET_JMODS) \
 	      --strip-debug --vm server --compress 2 \
 	      --class-for-name \
-	      --exclude-jmod-section=headers --exclude-jmod-section=man \
+	      --no-header-files --no-man-pages \
 	      --dedup-legal-notices=error-if-not-same-content \
 	      --add-modules $(MODULE_ID) \
 	      --output $@
